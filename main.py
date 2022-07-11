@@ -3,24 +3,9 @@ import json
 import base64
 import pickle
 import requests
-import pypresence
-import discord
-import os
-#import colorama
-#from colorama import Fore, Style, Back, init
-from discord.ext import commands
-from pypresence import presence
-
-LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={user}&api_key={key}&format=json"
-DISCORD_API_POST_URL = "https://discord.com/api/v8/oauth2/applications/{client_id}/assets"
-
-os.system("")
-class colour():
-    BLACK = '\033[30m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    RESET = '\033[0m'
+from pypresence import Presence
+from cmyui.logging import Ansi
+from cmyui.logging import log
 
 def main():
     try:
@@ -33,82 +18,76 @@ def main():
     with open("config.json") as f:
         config = json.load(f)
     with open('replace.json') as content:
-        special_characters = json.load(content)
+        replace = json.load(content)
 
-    lfm = "lfm"
-    lfmimg = config['lfmimg']
-        
-    if lfm in album_cache and lfm:
-        print(colour.GREEN + "small image found! skipping first cache process...\n" + colour.RESET)
+    LASTFM_API_URL = f"http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={config['lastfm_name']}&api_key={config['lastfm_api_key']}&format=json"
+    DISCORD_API_POST_URL = f"https://discord.com/api/v8/oauth2/applications/{config['client_id']}/assets"
+
+    if "lfm" in album_cache:
+        log("small image found! skipping first cache process...", Ansi.YELLOW)
     else:
-        print(colour.YELLOW + "attn: small image not found! caching..." + colour.RESET)
-        requests.post(DISCORD_API_POST_URL.format(client_id=config["client_id"]),
+        log("attn: small image not found! caching...", Ansi.YELLOW)
+        requests.post(DISCORD_API_POST_URL.format(client_id=config['client_id']),
                       json={"name": "lfm",
-                            "image": lfmimg,
+                            "image": config['lfmimg'],
                             "type": 1},
-                      headers={"Authorization": config["discord_token"],
+                      headers={"Authorization": config['discord_token'],
                                "content-type": "application/json"})
         album_cache.append("lfm")
         with open("album_cache.p", "wb") as f:
             pickle.dump(album_cache, f)
-        print(colour.GREEN + "cached successfully!\n" + colour.RESET)
+        log("cached successfully!", Ansi.GREEN)
 
-    rpc = pypresence.Presence(config["client_id"], pipe=0)
+    rpc = Presence(client_id=config['client_id'], pipe=0)
     rpc.connect()
-
-    old_trackname = "" 
 
     while True:
         try:
             trackinfo = requests.get(LASTFM_API_URL.format(user=config["lastfm_name"],
                                                            key=config["lastfm_api_key"])).json()
             trackinfo = trackinfo["recenttracks"]["track"][0]
-
-            album_text = trackinfo["album"]["#text"]
-            album_display = trackinfo["album"]["#text"] + "​​"
-            track_display = trackinfo["name"] + "​​"
-            replace = special_characters
-            album_name = album_text.translate(str.maketrans(replace)).lower()[:32]            
-            album_discord = ''.join([str(ord(x) - 96) for x in album_name])[:32]
+            artist = trackinfo['artist']['#text']
+            album = trackinfo["album"]["#text"]
+            track = trackinfo["name"]
+            album_name = album.translate(str.maketrans(replace)).lower()[:32]
+            formatted_album = ''.join([str(ord(x) - 96) for x in album_name])[:32]
             
-            if album_discord not in album_cache and album_discord:
-                print(colour.YELLOW + f"attn: {album_text} not found in album cache, caching..." + colour.RESET)
-                cover_img = requests.get(
-                    trackinfo["image"][1]["#text"]).content
-                cover_img = "data:image/jpeg;base64," + \
-                    str(base64.b64encode(cover_img), "utf-8")
+            if formatted_album not in album_cache:
+                log(f"attn: {album_name} not found in album cache, caching...", Ansi.YELLOW)
+                cover_img = "data:image/jpeg;base64," + str(base64.b64encode(requests.get(trackinfo["image"][1]["#text"]).content), "utf-8")
+                log(f"converted {album} album image successfully!", Ansi.GREEN)
                 requests.post(DISCORD_API_POST_URL.format(client_id=config["client_id"]),
-                              json={"name": album_discord,
+                              json={"name": formatted_album,
                                     "image": cover_img,
                                     "type": 1},
                               headers={"Authorization": config["discord_token"],
                                        "content-type": "application/json"})
-                print(colour.GREEN + f"converted {album_text} to {album_discord} successfully!" + colour.RESET)
-                print(colour.GREEN + f"{album_text} sent to discord correctly!" + colour.RESET)
-                album_cache.append(album_discord)
+                log(f"{album} sent to discord correctly!", Ansi.GREEN)
+                album_cache.append(formatted_album)
                 with open("album_cache.p", "wb") as f:
                     pickle.dump(album_cache, f)
-                print(colour.GREEN + "cached succesfully!\n" + colour.RESET)
+                log("cached succesfully!\n", Ansi.GREEN)
 
-            rpc.update(details=f"{track_display}",
-                       state=f"by {trackinfo['artist']['#text']}",
-                       large_image=album_discord if album_discord else None,
+            rpc.update(details=f"{track}",
+                       state=f"by {artist}",
+                       large_image=formatted_album if formatted_album else None,
                        small_image="lfm",
                        small_text=f"scrobbling on account {config['lastfm_name']}",
-                       large_text=album_display if album_display else None)
+                       large_text=album_name if album_name else None)
             
-            if old_trackname != trackinfo["name"]:
-                print(colour.YELLOW + f"attn: updating rpc with current track {trackinfo['name']}..." + colour.RESET)
-                old_trackname = trackinfo["name"]
-                print(colour.GREEN + "successfully set rpc!\n" + colour.RESET)
-                print("waiting for next track...\n")
+            old_track = ""
+
+            if old_track not in track:
+                log(f"attn: updating rpc with current track {trackinfo['name']}...", Ansi.YELLOW)
+                old_track = trackinfo["name"]
+                log("successfully set rpc!", Ansi.GREEN)
+                log("waiting for next track...")
 
             time.sleep(0.3)
 
         except Exception as e:
-            print(colour.RED + "exception occurred:", e + colour.RESET)
-            print(colour.YELLOW + "attn: skipping generic lastfm error: 'recenttracks', you can ignore this\n" + colour.RESET)
+            log(f"exception occurred: {e}", Ansi.RED)
 
 if __name__ == '__main__':
-    print("welcome to listening-to!\n")
+    log("welcome to listening-to!\n")
     main()

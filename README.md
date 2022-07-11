@@ -6,7 +6,7 @@ a program that displays your current status on last.fm to the world on discord
 to install from source:
 1. clone and cd into this github repository with
     ```bash
-    git clone https://github.com/juup1ter/listening-to/ && cd listening-to
+    git clone https://github.com/0i8/listening-to/ && cd listening-to
     ```
     or, download the tarball and extract it
     
@@ -23,14 +23,14 @@ to install from source:
 4. finally, replace lastfm_name with your last.fm name in config.json
 5. install any pip packages that you are missing with
     ```bash
-    python3 -m pip install -r requirements.txt
+    python3.9 -m pip install -r requirements.txt
     ```
 to install a compiled binary for windows only, just click on the releases tab next to the source code.
 
 ### usage
 to run, simply execute
 ```
-python3 server.py
+python3.9 main.py
 ```
 in whatever directory you cloned into
 
@@ -46,7 +46,5 @@ another issue i've seen is people with 2fa who log out/log in frequently may see
 
 ### credits
 base by null, null#3330
-
 expanded by jupiter, jupiter#0413
-
 thanks to qwertyquerty for [pypresence](https://github.com/qwertyquerty/pypresence)

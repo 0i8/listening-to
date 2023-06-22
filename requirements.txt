@@ -1,5 +1,5 @@
-pickle
 pypresence==4.2.0
 urllib3==1.26.2
 discord
 cmyui
+tzdata

@@ -16,17 +16,14 @@ to install from source:
 
 3. find your discord user token, google how to do it. you will replace discord_token in config.json with your token
 
-    > be warned as this is in the grey area of discord tos, i am not liable if any action is taken on your account as a result of this program. 
-    > DO NOT SHARE YOUR TOKEN ANYWHERE AND DO NOT COMMIT IT TO GITHUB    
+    > be warned as this is in a grey area of the discord tos, and as such; i am not liable for any action taken against your account for the usage of this program.
 
 3. go to the [last.fm api page](https://www.last.fm/api) and register for an account. you will replace lastfm_api_key in config.json with your api key after registering.
-4. finally, replace lastfm_name with your last.fm name in config.json
+4. finally, replace lastfm_name with your last.fm username in config.json
 5. install any pip packages that you are missing with
     ```bash
     python3.9 -m pip install -r requirements.txt
     ```
-to install a compiled binary for windows only, just click on the releases tab next to the source code.
-
 ### usage
 to run, simply execute
 ```
@@ -34,11 +31,9 @@ python3.9 main.py
 ```
 in whatever directory you cloned into
 
-or, execute the binary you downloaded
-
-> discord takes a while to cache the album art so you might have to wait a little before the album art will show up
-
 if you see "starting listening-to", and it starts to display "caching" messages and a ton of green; you've successfully ran the program. your status should be changed on discord.
+
+if your status changes but you cannot see your album cover, check to see if you hit the asset limit for your application. if not, just wait a bit. it will take a minute to cache.
 
 if you have any problems caching stuff (status will not change on discord but last.fm reports a change), then try editing replace.json with some of the characters that may be of issue. this shouldn't be a problem, but i'll leave it here just in case.
 
@@ -46,5 +41,7 @@ another issue i've seen is people with 2fa who log out/log in frequently may see
 
 ### credits
 base by null, null#3330
-expanded by jupiter, jupiter#0413
+
+expanded by jupiter
+
 thanks to qwertyquerty for [pypresence](https://github.com/qwertyquerty/pypresence)

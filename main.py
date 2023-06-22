@@ -3,11 +3,12 @@ import json
 import base64
 import pickle
 import requests
+from typing import List, Dict
 from pypresence import Presence
 from cmyui.logging import Ansi, log
 
 
-def load_album_cache(file_path):
+def load_album_cache(file_path: str) -> List[str]:
     try:
         with open(file_path, "rb") as f:
             album_cache = pickle.load(f)
@@ -17,7 +18,7 @@ def load_album_cache(file_path):
     return album_cache
 
 
-def load_replace_file(file_path):
+def load_replace_file(file_path: str) -> Dict[str, str]:
     try:
         with open(file_path) as f:
             replace = json.load(f)
@@ -26,19 +27,19 @@ def load_replace_file(file_path):
     return replace
 
 
-def save_album_cache(album_cache, file_path):
+def save_album_cache(album_cache: List[str], file_path: str) -> None:
     with open(file_path, "wb") as f:
         pickle.dump(album_cache, f)
 
 
-def post_discord_asset(client_id, discord_token, asset_data):
+def post_discord_asset(client_id: str, discord_token: str, asset_data: Dict[str, str]) -> None:
     discord_api_post_url = f"https://discord.com/api/v8/oauth2/applications/{client_id}/assets"
     headers = {"Authorization": discord_token, "Content-Type": "application/json"}
     response = requests.post(discord_api_post_url, json=asset_data, headers=headers)
     response.raise_for_status()
 
 
-def fetch_track_info(lastfm_api_url, user, api_key):
+def fetch_track_info(lastfm_api_url: str, user: str, api_key: str) -> Dict[str, str]:
     response = requests.get(lastfm_api_url.format(user=user, key=api_key))
     response.raise_for_status()
     return response.json()["recenttracks"]["track"][0]

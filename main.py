@@ -17,6 +17,15 @@ def load_album_cache(file_path):
     return album_cache
 
 
+def load_replace_file(file_path):
+    try:
+        with open(file_path) as f:
+            replace = json.load(f)
+    except FileNotFoundError:
+        replace = {}
+    return replace
+
+
 def save_album_cache(album_cache, file_path):
     with open(file_path, "wb") as f:
         pickle.dump(album_cache, f)
@@ -40,7 +49,7 @@ def main():
         config = json.load(f)
 
     album_cache = load_album_cache("album_cache.p")
-    replace = {}
+    replace = load_replace_file("replace.json")
 
     lastfm_api_url = f"http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={config['lastfm_name']}&api_key={config['lastfm_api_key']}&format=json"
     discord_api_post_url = f"https://discord.com/api/v8/oauth2/applications/{config['client_id']}/assets"

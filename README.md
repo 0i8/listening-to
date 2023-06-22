@@ -5,25 +5,24 @@ a program that displays your current status on last.fm to the world on discord
 ### installation
 to install from source:
 1. clone and cd into this github repository with
-    ```bash
-    git clone https://github.com/0i8/listening-to/ && cd listening-to
-    ```
-    or, download the tarball and extract it
+```bash
+git clone https://github.com/0i8/listening-to/ && cd listening-to
+```
+or, download the tarball and extract it
     
 2a. go to the [discord dev portal](https://discord.com/developers/) and create a new application, you will replace client_id in config.json with your application id
  
 2b. name this application whatever you want your status to look like, for example: if you want it to display "Playing music", you would name the application "music".
 
 3. find your discord user token, google how to do it. you will replace discord_token in config.json with your token
-
-    > be warned as this is in a grey area of the discord tos, and as such; i am not liable for any action taken against your account for the usage of this program.
+> be warned as this is in a grey area of the discord tos, and as such; i am not liable for any action taken against your account for the usage of this program.
 
 3. go to the [last.fm api page](https://www.last.fm/api) and register for an account. you will replace lastfm_api_key in config.json with your api key after registering.
 4. finally, replace lastfm_name with your last.fm username in config.json
 5. install any pip packages that you are missing with
-    ```bash
-    python3.9 -m pip install -r requirements.txt
-    ```
+```bash
+python3.9 -m pip install -r requirements.txt
+```
 ### usage
 to run, simply execute
 ```

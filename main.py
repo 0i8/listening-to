@@ -82,7 +82,7 @@ def update_rpc_with_track(track_info: Dict[str, str], rpc: Presence) -> str:
 
     rpc.update(details=track, state=f"by {artist}", large_image=formatted_album or None,
                small_image="lfm", small_text=f"scrobbling on account {config['lastfm_name']}",
-               large_text=album_name or None)
+               large_text=album or None)
 
     return track
 

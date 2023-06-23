@@ -11,12 +11,8 @@ from cmyui.logging import Ansi, log
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={user}&api_key={key}&format=json"
 DISCORD_API_POST_URL = "https://discord.com/api/v8/oauth2/applications/{client_id}/assets"
 
-# global variables
-album_cache = []
-replace = {}
-last_track_info = None
-
 def load_album_cache(file_path: str) -> List[str]:
+    """load the album cache from a pickle file."""
     try:
         with open(file_path, "rb") as f:
             return pickle.load(f)
@@ -24,41 +20,35 @@ def load_album_cache(file_path: str) -> List[str]:
         save_album_cache([], file_path)
         return []
 
-
 def load_replace_file(file_path: str) -> Dict[str, str]:
+    """load the replace file containing character replacements for album names"""
     try:
         with open(file_path) as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
-
 def save_album_cache(album_cache: List[str], file_path: str) -> None:
+    """save the album cache to a pickle file."""
     with open(file_path, "wb") as f:
         pickle.dump(album_cache, f)
 
-
 def post_discord_asset(client_id: str, discord_token: str, asset_data: Dict[str, str]) -> None:
+    """post an asset (our album image) to discord using its' API."""
     headers = {"Authorization": discord_token, "Content-Type": "application/json"}
     response = requests.post(DISCORD_API_POST_URL.format(client_id=client_id), json=asset_data, headers=headers)
     response.raise_for_status()
 
-
 def fetch_track_info(lastfm_api_url: str, user: str, api_key: str) -> Dict[str, str]:
+    """fetch track information from the last.fm API."""
     response = requests.get(lastfm_api_url.format(user=user, key=api_key))
     response.raise_for_status()
     return response.json()["recenttracks"]["track"][0]
 
-
-def initialize():
-    global album_cache, replace, last_track_info
-    album_cache = load_album_cache("album_cache.p")
-    replace = load_replace_file("replace.json")
-    last_track_info = None
-
-
 def update_rpc_with_track(track_info: Dict[str, str], rpc: Presence) -> str:
+    """update the RPC with the current track information."""
     global last_track_info, album_cache, replace
+
     track = track_info["name"]
     artist = track_info["artist"]["#text"]
     album = track_info["album"]["#text"]
@@ -68,37 +58,59 @@ def update_rpc_with_track(track_info: Dict[str, str], rpc: Presence) -> str:
     if formatted_album not in album_cache:
         log(f"caching album: {album_name}...", Ansi.YELLOW)
         cover_img = "data:image/jpeg;base64," + base64.b64encode(requests.get(track_info["image"][1]["#text"]).content).decode("utf-8")
-        log(f"converted {album}'s album image successfully!", Ansi.GREEN)
-        post_discord_asset(config["client_id"], config["discord_token"], {"name": formatted_album, "image": cover_img, "type": 1})
-        log(f"{album} sent to Discord correctly!", Ansi.GREEN)
-        album_cache.append(formatted_album)
-        save_album_cache(album_cache, "album_cache.p")
-        log("cached successfully!", Ansi.GREEN)
+
+        if cover_img:
+            log(f"converted {album}'s album image successfully!", Ansi.GREEN)
+        else:
+            log(f"{album}'s image failed to convert, or there is no image to convert.")
+
+        try:
+            post_discord_asset(config["client_id"], config["discord_token"], {"name": formatted_album, "image": cover_img, "type": 1})
+            log(f"{album} sent to discord correctly!", Ansi.GREEN)
+            album_cache.append(formatted_album)
+            save_album_cache(album_cache, "album_cache.p")
+            log("cached successfully!", Ansi.GREEN)
+        except requests.exceptions.HTTPError as http_err:
+            log(f"failed to post album to discord: {http_err}", Ansi.RED)
 
     if last_track_info != track:
         log(f"updating RPC with current track: {track}...", Ansi.YELLOW)
         last_track_info = track
         log("successfully set RPC!", Ansi.GREEN)
 
-    rpc.update(details=track, state=f"by {artist}", large_image=formatted_album or None,
-               small_image="lfm", small_text=f"scrobbling on account {config['lastfm_name']}",
-               large_text=album or None)
+    rpc.update(
+        details=track,
+        state=f"by {artist}",
+        large_image=formatted_album or None,
+        small_image="lfm",
+        small_text=f"scrobbling on account {config['lastfm_name']}",
+        large_text=album or None
+    )
 
     return track
 
+def initialize():
+    """load everything useful to use that we won't need to load again."""
+    global album_cache, replace, last_track_info
+    album_cache = load_album_cache("album_cache.p")
+    replace = load_replace_file("replace.json")
+    last_track_info = None
 
 def main():
+    """main function to run the script."""
     initialize()
 
     lastfm_api_url = LASTFM_API_URL.format(user=config['lastfm_name'], key=config['lastfm_api_key'])
-    discord_api_post_url = DISCORD_API_POST_URL.format(client_id=config['client_id'])
 
     if "lfm" not in album_cache:
         log("caching small image...", Ansi.YELLOW)
-        post_discord_asset(config["client_id"], config["discord_token"], {"name": "lfm", "image": config["lfmimg"], "type": 1})
-        album_cache.append("lfm")
-        save_album_cache(album_cache, "album_cache.p")
-        log("cached successfully!", Ansi.GREEN)
+        try:
+            post_discord_asset(config["client_id"], config["discord_token"], {"name": "lfm", "image": config["lfmimg"], "type": 1})
+            album_cache.append("lfm")
+            save_album_cache(album_cache, "album_cache.p")
+            log("cached successfully!", Ansi.GREEN)
+        except requests.exceptions.HTTPError as http_err:
+            log(f"failed to post small image to Discord: {http_err}", Ansi.RED)
     else:
         log("small image is already cached. skipping caching...", Ansi.YELLOW)
 
@@ -119,13 +131,10 @@ def main():
 
             if last_track_info != track:
                 last_track_info = update_rpc_with_track(track_info, rpc)
-        except requests.exceptions.HTTPError as http_err:
-            log(f"HTTP error occurred: {http_err}", Ansi.RED)
-        except requests.exceptions.RequestException as err:
-            log(f"exception occurred during request: {err}", Ansi.RED)
+        except requests.exceptions.RequestException as e:
+            log(f"exception occurred during request: {e}", Ansi.RED)
         except Exception as e:
             log(f"unknown exception occurred: {e}", Ansi.RED)
-
 
 if __name__ == '__main__':
     log("welcome to listening-to!\n")

@@ -16,6 +16,7 @@ def load_album_cache(file_path: str) -> List[str]:
     try:
         with open(file_path, "rb") as f:
             return pickle.load(f)
+        log("opened album cache successfully!", Ansi.GREEN)
     except FileNotFoundError:
         save_album_cache([], file_path)
         return []
@@ -25,13 +26,18 @@ def load_replace_file(file_path: str) -> Dict[str, str]:
     try:
         with open(file_path) as f:
             return json.load(f)
+        log("opened replace file successfully!", Ansi.GREEN)
     except FileNotFoundError:
         return {}
 
 def save_album_cache(album_cache: List[str], file_path: str) -> None:
     """save the album cache to a pickle file."""
-    with open(file_path, "wb") as f:
-        pickle.dump(album_cache, f)
+    try:
+        with open(file_path, "wb") as f:
+            pickle.dump(album_cache, f)
+        log("saved album cache successfully!", Ansi.GREEN)
+    except Exception as e:
+        log(f"we failed to save the album cache.. {e}", Ansi.RED)
 
 def post_discord_asset(client_id: str, discord_token: str, asset_data: Dict[str, str]) -> None:
     """post an asset (our album image) to discord using its' API."""
@@ -66,10 +72,9 @@ def update_rpc_with_track(track_info: Dict[str, str], rpc: Presence) -> str:
 
         try:
             post_discord_asset(config["client_id"], config["discord_token"], {"name": formatted_album, "image": cover_img, "type": 1})
-            log(f"{album} sent to discord correctly!", Ansi.GREEN)
+            log(f"{album} sent to discord successfully (as {formatted_album})!", Ansi.GREEN)
             album_cache.append(formatted_album)
             save_album_cache(album_cache, "album_cache.p")
-            log("cached successfully!", Ansi.GREEN)
         except requests.exceptions.HTTPError as http_err:
             log(f"failed to post album to discord: {http_err}", Ansi.RED)
 
@@ -83,7 +88,7 @@ def update_rpc_with_track(track_info: Dict[str, str], rpc: Presence) -> str:
         state=f"by {artist}",
         large_image=formatted_album or None,
         small_image="lfm",
-        small_text=f"scrobbling on account {config['lastfm_name']}",
+        small_text=f"{config['small_tooltip_text']}",
         large_text=album or None
     )
 
@@ -112,7 +117,7 @@ def main():
         except requests.exceptions.HTTPError as http_err:
             log(f"failed to post small image to Discord: {http_err}", Ansi.RED)
     else:
-        log("small image is already cached. skipping caching...", Ansi.YELLOW)
+        log("small image is already cached. skipping...", Ansi.YELLOW)
 
     rpc = Presence(client_id=config["client_id"], pipe=0)
     rpc.connect()
